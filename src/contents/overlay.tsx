@@ -1,5 +1,6 @@
 import { useStorage } from "@plasmohq/storage/hook"
 import type { PlasmoCSConfig } from "plasmo"
+import { HighlightOverlay } from "~components/HighlightOverlay"
 import { Scene } from "~components/Scene"
 
 export const config: PlasmoCSConfig = {
@@ -27,6 +28,7 @@ export default function Overlay() {
   return (
     <div className="slob-root">
       <Scene />
+      <HighlightOverlay />
     </div>
   )
 }

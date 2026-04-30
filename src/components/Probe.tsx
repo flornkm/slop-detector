@@ -97,6 +97,7 @@ export function Probe({ node }: { node: THREE.Object3D }) {
       e.stopPropagation()
       e.preventDefault()
       dragging.current = true
+      useStore.getState().setDragging(true)
       setCursor("grabbing")
       const local = toLocal(hits[0].point).clone()
       offset.current.copy(node.position).sub(local)
@@ -121,6 +122,7 @@ export function Probe({ node }: { node: THREE.Object3D }) {
     const onUp = (e: PointerEvent) => {
       if (!dragging.current) return
       dragging.current = false
+      useStore.getState().setDragging(false)
       e.stopPropagation()
       e.preventDefault()
       setCursor(null)
@@ -185,11 +187,10 @@ export function Probe({ node }: { node: THREE.Object3D }) {
     }
 
     if (useStore.getState().powered) {
-      const dx = target.current.x - rest.x
-      const dz = target.current.z - rest.z
-      const dist = Math.hypot(dx, dz)
-      const r = Math.min(1, dist * 5 + (dragging.current ? 0.06 : 0) + Math.random() * 0.04)
-      reading.current = stepReading(reading.current, r)
+      const aiRating = useStore.getState().aiRating
+      const jitter = aiRating > 0.05 ? (Math.random() - 0.5) * 0.04 : 0
+      const target = Math.max(0, Math.min(1, aiRating + jitter))
+      reading.current = stepReading(reading.current, target)
       setReading(reading.current)
     } else if (reading.current !== 0) {
       reading.current *= 0.85

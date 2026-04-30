@@ -3,6 +3,7 @@ import { useMemo } from "react"
 import * as THREE from "three"
 import { applyTexturedMaterials } from "~lib/materials"
 import geigerUrl from "url:~assets/models/geiger.glb"
+import { AIDetector } from "./AIDetector"
 import { ButtonIcons } from "./ButtonIcons"
 import { Cable } from "./Cable"
 import { CornerAnchor } from "./CornerAnchor"
@@ -84,6 +85,7 @@ export function GeigerCounter() {
       <GroundShadows anchor={parts.body} />
       <KeyLight anchor={parts.body} />
       <ElementHighlighter probeTip={parts.probeFace} />
+      <AIDetector />
     </>
   )
 }

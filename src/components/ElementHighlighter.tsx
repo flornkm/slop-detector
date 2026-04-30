@@ -23,10 +23,12 @@ const TARGET_TAGS = new Set([
   "CODE",
   "PRE",
   "BLOCKQUOTE",
-  "BUTTON"
+  "BUTTON",
+  "SPAN"
 ])
 
 const SKIP_TAGS = new Set(["HTML", "BODY", "MAIN", "ARTICLE", "SECTION"])
+const POLL_S = 0.08
 
 function hasBackgroundImage(el: Element): boolean {
   const bg = window.getComputedStyle(el).backgroundImage
@@ -34,26 +36,7 @@ function hasBackgroundImage(el: Element): boolean {
 }
 
 function findInnerImage(el: Element): Element | null {
-  const img = el.querySelector("img, picture, svg, video")
-  return img
-}
-const STYLE_ID = "slob-highlight-style"
-const HIGHLIGHT_CLASS = "slob-highlight-target"
-const POLL_S = 0.08
-
-function ensureStyle() {
-  if (document.getElementById(STYLE_ID)) return
-  const style = document.createElement("style")
-  style.id = STYLE_ID
-  style.textContent = `
-    .${HIGHLIGHT_CLASS} {
-      outline: 2px solid #00ff66 !important;
-      outline-offset: 2px !important;
-      box-shadow: 0 0 14px rgba(0, 255, 102, 0.45) !important;
-      transition: outline-color 60ms linear, box-shadow 60ms linear !important;
-    }
-  `
-  document.head.appendChild(style)
+  return el.querySelector("img, picture, svg, video")
 }
 
 export function ElementHighlighter({
@@ -67,10 +50,9 @@ export function ElementHighlighter({
   const current = useRef<Element | null>(null)
 
   useEffect(() => {
-    ensureStyle()
     return () => {
-      if (current.current) current.current.classList.remove(HIGHLIGHT_CLASS)
       current.current = null
+      useStore.getState().setHighlighted(null)
     }
   }, [])
 
@@ -78,10 +60,11 @@ export function ElementHighlighter({
     if (!probeTip) return
     const powered = useStore.getState().powered
 
-    if (!powered) {
+    const dragging = useStore.getState().dragging
+    if (!powered || !dragging) {
       if (current.current) {
-        current.current.classList.remove(HIGHLIGHT_CLASS)
         current.current = null
+        useStore.getState().setHighlighted(null)
       }
       return
     }
@@ -103,8 +86,8 @@ export function ElementHighlighter({
       y > window.innerHeight
     ) {
       if (current.current) {
-        current.current.classList.remove(HIGHLIGHT_CLASS)
         current.current = null
+        useStore.getState().setHighlighted(null)
       }
       return
     }
@@ -130,9 +113,8 @@ export function ElementHighlighter({
     }
 
     if (resolved !== current.current) {
-      if (current.current) current.current.classList.remove(HIGHLIGHT_CLASS)
-      if (resolved) resolved.classList.add(HIGHLIGHT_CLASS)
       current.current = resolved
+      useStore.getState().setHighlighted(resolved)
     }
   })
 
