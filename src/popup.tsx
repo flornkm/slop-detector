@@ -52,40 +52,44 @@ export default function Popup() {
 }
 
 function PowerGlyph({ color, on }: { color: string; on: boolean }) {
-  const fill = on ? color : "none"
-  const stroke = color
-  const sw = 2.4
+  const path = on
+    ? "M 2 24 L 16 24 L 20 24 L 24 10 L 28 38 L 32 6 L 36 32 L 40 22 L 44 26 L 48 24 L 62 24"
+    : "M 2 24 L 62 24"
+
+  const tickColor = on ? color : "rgba(19,35,26,0.18)"
+
   return (
     <svg
-      width="56"
-      height="56"
-      viewBox="0 0 64 64"
+      width="80"
+      height="44"
+      viewBox="0 0 64 48"
+      fill="none"
       className="block mx-auto transition-colors"
       aria-hidden>
-      <circle
-        cx="32"
-        cy="14"
-        r="7"
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={sw}
+      <line x1="2" y1="6" x2="2" y2="42" stroke={tickColor} strokeWidth="1" />
+      <line
+        x1="62"
+        y1="6"
+        x2="62"
+        y2="42"
+        stroke={tickColor}
+        strokeWidth="1"
       />
-      <rect
-        x="23"
-        y="25"
-        width="18"
-        height="14"
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="miter"
+      <line
+        x1="2"
+        y1="24"
+        x2="62"
+        y2="24"
+        stroke={tickColor}
+        strokeWidth="0.6"
+        strokeDasharray="2 3"
       />
-      <polygon
-        points="32,43 43,57 21,57"
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="miter"
+      <path
+        d={path}
+        stroke={color}
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   )
