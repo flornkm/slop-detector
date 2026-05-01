@@ -5,11 +5,12 @@
   "description": "A Geiger-counter overlay that reacts to whatever page you're on.",
   "author": "Florian Kiem",
   "scripts": {
-    "dev": "concurrently -k -n css,plasmo -c green,magenta \"bun run css:watch\" \"plasmo dev\"",
+    "dev": "bun run css:build && concurrently -k -n css,plasmo -c green,magenta \"bun run css:watch\" \"plasmo dev\"",
     "build": "bun run css:build && plasmo build",
     "package": "plasmo package",
-    "css:build": "tailwindcss -i ./src/style.css -o ./src/style.compiled.css --minify",
-    "css:watch": "tailwindcss -i ./src/style.css -o ./src/style.compiled.css --watch"
+    "css:flatten": "lightningcss --targets \"chrome 100, firefox 100, safari 15\" ./src/style.tw.css -o ./src/style.compiled.css",
+    "css:build": "tailwindcss -i ./src/style.css -o ./src/style.tw.css --minify && bun run css:flatten",
+    "css:watch": "bun run scripts/css-watch.ts"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.83",
@@ -17,7 +18,7 @@
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.17.10",
     "howler": "^2.2.4",
-    "plasmo": "^0.89.4",
+    "plasmo": "0.90.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-howler": "^5.2.0",
@@ -33,6 +34,7 @@
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.169.0",
     "concurrently": "^9.2.1",
+    "lightningcss-cli": "^1.32.0",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.6.3"
   },

@@ -81,11 +81,11 @@ function digitFromToken(raw: string): number | null {
   return d
 }
 
-const AI_EMOJI = /[\u{1F680}\u{1F4C8}\u{1F525}✨\u{1F4A1}\u{1F3AF}\u{1F64C}\u{1F44F}\u{1F31F}⚡]/gu
+const ANY_EMOJI = /\p{Extended_Pictographic}/gu
 const BUZZWORDS =
-  /\b(delve|leverage|robust|synergy|ecosystem|navigate|unlock|game[\s-]?changer|deep dive|unpack|paradigm|holistic|seamless|cutting[\s-]?edge|state[\s-]?of[\s-]?the[\s-]?art|revolutionize|disrupt|elevate|empower|optimize|streamline|innovate|transform|inflection point)\b/gi
+  /\b(delve|leverage|robust|synergy|ecosystem|navigate|unlock|game[\s-]?changer|deep dive|unpack|paradigm|holistic|seamless|cutting[\s-]?edge|state[\s-]?of[\s-]?the[\s-]?art|revolutionize|disrupt|elevate|empower|optimize|streamline|innovate|transform|inflection point|embrace|aesthetic|ultimate)\b/gi
 const HOOKS =
-  /\b(here'?s the thing|hot take|let me share|i'?ll be honest|fun fact|plot twist|story time|quick story|true story)\b/i
+  /\b(here'?s the thing|hot take|let me share|i'?ll be honest|fun fact|plot twist|story time|quick story|true story|why .* is the ultimate)/i
 const NUMBERED_INSIGHT =
   /\b\d+\s+(things?|lessons?|insights?|takeaways?|tips?|reasons?|ways?|truths?|principles?|rules?)\s+(i\s+)?(learned|from|to|about|for)\b/i
 const CTA =
@@ -94,38 +94,43 @@ const GENERIC_CONCLUSION =
   /\b(future is bright|just the beginning|sky'?s the limit|next level|change the world|stay tuned|trust the process|onward and upward)\b/i
 const HUMBLE_BRAG =
   /\b(humbled|grateful|honored|blessed|thrilled|proud to (announce|share))\b/i
+const COLON_HOOK = /^[\w'’\s\-]{2,40}:\s+\S/
 
 function heuristicScore(text: string): number {
   if (!text) return 0
   let score = 0
 
-  const emojis = text.match(AI_EMOJI) || []
-  if (emojis.length >= 2) score += 0.25
-  if (emojis.length >= 4) score += 0.15
+  const emojis = text.match(ANY_EMOJI) || []
+  if (emojis.length >= 1) score = Math.max(score, 0.7)
+  if (emojis.length >= 2) score = Math.max(score, 0.78)
+  if (emojis.length >= 3) score = Math.max(score, 0.85)
+  if (emojis.length >= 5) score = Math.max(score, 0.92)
 
   const hashtags = text.match(/#\w+/g) || []
-  if (hashtags.length >= 2) score += 0.2
-  if (hashtags.length >= 4) score += 0.15
+  if (hashtags.length >= 1) score = Math.max(score, 0.55)
+  if (hashtags.length >= 3) score = Math.max(score, 0.78)
 
+  let extras = 0
   const buzzMatches = text.match(BUZZWORDS) || []
-  if (buzzMatches.length >= 1) score += 0.2
-  if (buzzMatches.length >= 3) score += 0.15
+  if (buzzMatches.length >= 1) extras += 0.18
+  if (buzzMatches.length >= 3) extras += 0.12
 
-  if (HOOKS.test(text)) score += 0.2
-  if (NUMBERED_INSIGHT.test(text)) score += 0.25
-  if (CTA.test(text)) score += 0.2
-  if (GENERIC_CONCLUSION.test(text)) score += 0.2
-  if (HUMBLE_BRAG.test(text)) score += 0.15
+  if (HOOKS.test(text)) extras += 0.18
+  if (NUMBERED_INSIGHT.test(text)) extras += 0.22
+  if (CTA.test(text)) extras += 0.18
+  if (GENERIC_CONCLUSION.test(text)) extras += 0.18
+  if (HUMBLE_BRAG.test(text)) extras += 0.15
+  if (COLON_HOOK.test(text)) extras += 0.1
 
   const arrowLines =
     text.match(/^\s*[•→✨\u{1F539}\u{1F538}\-\*]\s/gmu) || []
-  if (arrowLines.length >= 2) score += 0.15
-  if (arrowLines.length >= 4) score += 0.1
+  if (arrowLines.length >= 2) extras += 0.12
+  if (arrowLines.length >= 4) extras += 0.08
 
   const emDashes = (text.match(/—/g) || []).length
-  if (emDashes >= 3) score += 0.1
+  if (emDashes >= 3) extras += 0.08
 
-  return Math.min(1, score)
+  return Math.min(1, score + extras)
 }
 
 async function llmScore(content: string): Promise<number | null> {

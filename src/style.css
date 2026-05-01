@@ -1,9 +1,17 @@
 @import "tailwindcss";
 
+html, body {
+  margin: 0;
+  background: #f0eae0;
+}
+
 @theme {
   --color-cream: #f0eae0;
   --color-ink: #1a1a1d;
   --color-slob: #ff5e10;
   --color-moss: #519f82;
+  --color-display: #13231a;
+  --color-display-glass: #2a3d31;
   --color-muted: #5a5040;
+  --font-mono: "CommitMono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
