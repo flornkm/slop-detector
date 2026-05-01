@@ -12,14 +12,16 @@ import { SoundManager } from "./SoundManager"
 export function Scene() {
   return (
     <Canvas
-      dpr={[1, 1.5]}
-      shadows
+      dpr={[1, 2]}
+      shadows={{ type: THREE.VSMShadowMap }}
       gl={{
         alpha: true,
         antialias: true,
-        toneMapping: THREE.NoToneMapping,
+        toneMapping: THREE.NeutralToneMapping,
         toneMappingExposure: 1.0,
-        powerPreference: "low-power"
+        powerPreference: "high-performance",
+        outputColorSpace: THREE.SRGBColorSpace,
+        stencil: false
       }}
       style={{
         position: "absolute",
@@ -40,40 +42,78 @@ export function Scene() {
         far={3}
       />
 
-      <hemisphereLight args={["#eef0f2", "#1c1d1a", 0.32]} />
+      <hemisphereLight args={["#fff4e0", "#23282a", 0.55]} />
+      <ambientLight intensity={0.18} color="#f4ead8" />
+
+      <pointLight
+        position={[-0.8, 0.35, 0]}
+        intensity={0.55}
+        color="#fff2dc"
+        distance={2.5}
+        decay={1.4}
+      />
+      <pointLight
+        position={[0.8, 0.35, 0]}
+        intensity={0.55}
+        color="#eef2f8"
+        distance={2.5}
+        decay={1.4}
+      />
+      <pointLight
+        position={[0, 0.3, 0.9]}
+        intensity={0.35}
+        color="#f4ead8"
+        distance={2.2}
+        decay={1.6}
+      />
+      <pointLight
+        position={[0, 0.3, -0.9]}
+        intensity={0.3}
+        color="#e8eef5"
+        distance={2.2}
+        decay={1.6}
+      />
 
       <Suspense fallback={null}>
-        <Environment frames={1} resolution={128} background={false}>
+        <Environment frames={1} resolution={512} background={false}>
           <Lightformer
             form="rect"
-            intensity={1.1}
-            color="#f5f7fa"
-            position={[-0.4, 1.2, -0.2]}
-            scale={[3, 1.6, 1]}
+            intensity={1.4}
+            color="#f8f9fc"
+            position={[-0.35, 1.4, -0.15]}
+            scale={[4.0, 2.4, 1]}
             rotation={[-Math.PI / 2, 0, 0]}
           />
           <Lightformer
             form="rect"
-            intensity={0.35}
+            intensity={0.55}
             color="#dde7f0"
-            position={[1.0, 0.6, 0.3]}
-            scale={[1.6, 0.9, 1]}
+            position={[1.1, 0.7, 0.4]}
+            scale={[2.4, 1.4, 1]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          />
+          <Lightformer
+            form="rect"
+            intensity={0.45}
+            color="#e8eef5"
+            position={[-1.1, 0.7, 0.4]}
+            scale={[2.0, 1.2, 1]}
             rotation={[-Math.PI / 2, 0, 0]}
           />
           <Lightformer
             form="circle"
-            intensity={5.5}
+            intensity={1.8}
             color="#ffffff"
-            position={[-0.18, 0.8, -0.1]}
-            scale={0.32}
+            position={[-0.15, 0.9, -0.05]}
+            scale={0.85}
             rotation={[-Math.PI / 2, 0, 0]}
           />
           <Lightformer
             form="rect"
-            intensity={2.0}
+            intensity={0.9}
             color="#ffffff"
-            position={[0.25, 0.7, -0.15]}
-            scale={[0.28, 0.1, 1]}
+            position={[0.25, 0.75, -0.1]}
+            scale={[0.55, 0.22, 1]}
             rotation={[-Math.PI / 2, 0, 0]}
           />
         </Environment>

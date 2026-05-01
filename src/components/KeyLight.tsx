@@ -23,25 +23,26 @@ export function KeyLight({ anchor }: { anchor: THREE.Object3D | null }) {
     anchor.getWorldPosition(wp)
     target.position.copy(wp)
     target.updateMatrixWorld()
-    l.position.set(wp.x - 0.26, wp.y + 0.42, wp.z - 0.28)
+    l.position.set(wp.x - 0.18, wp.y + 0.55, wp.z - 0.18)
   })
 
   return (
     <directionalLight
       ref={lightRef}
-      intensity={0.95}
-      color="#fbf6ec"
+      intensity={0.55}
+      color="#fff4e0"
       castShadow
       shadow-mapSize={[1024, 1024]}
       shadow-camera-near={0.05}
       shadow-camera-far={1.4}
-      shadow-camera-left={-0.14}
-      shadow-camera-right={0.14}
-      shadow-camera-top={0.14}
-      shadow-camera-bottom={-0.14}
-      shadow-bias={-0.0001}
-      shadow-normalBias={0.003}
-      shadow-radius={6}
+      shadow-camera-left={-0.18}
+      shadow-camera-right={0.18}
+      shadow-camera-top={0.18}
+      shadow-camera-bottom={-0.18}
+      shadow-bias={-0.00008}
+      shadow-normalBias={0.004}
+      shadow-radius={20}
+      shadow-blurSamples={25}
     />
   )
 }

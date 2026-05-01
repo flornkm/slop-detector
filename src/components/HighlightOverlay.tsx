@@ -1,38 +1,29 @@
 import { useEffect } from "react"
 import { useStore } from "~lib/store"
 
-const PAD = 120
+const PAD = 0
 const FADE_MS = 220
-const PARTICLE_COUNT = 6000
-const FLOW_DIR: [number, number] = [0.94, 0.34]
+const MAX_PARTICLES = 20000
+const DENSITY_PER_PX = 0.0055
+const FLOW_SPEED = 0.045
 
-const WRAP_MASK =
-  "radial-gradient(ellipse 95% 95% at center, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.25) 88%, rgba(0,0,0,0) 100%)"
-
-const MOSS_RGB: [number, number, number] = [81 / 255, 159 / 255, 130 / 255]
+const LIGHT_RGB: [number, number, number] = [180 / 255, 250 / 255, 205 / 255]
+const DARK_RGB: [number, number, number] = [22 / 255, 60 / 255, 40 / 255]
 
 const VERT_300 = `#version 300 es
-in vec2 a_base;
-in vec4 a_drift;
-in vec2 a_phase;
-in vec2 a_meta;
-uniform float u_time;
+in vec2 a_pos;
+in vec3 a_meta;
 uniform float u_dpr;
-uniform vec2 u_flow;
 out float v_alpha;
 void main() {
-  float speed = a_drift.x;
-  vec2 base = a_base + u_flow * u_time * speed;
-  float cx = sin(base.y * 7.3 + u_time * 0.32 + a_phase.x) * a_drift.z;
-  float cy = cos(base.x * 5.7 + u_time * 0.27 + a_phase.y) * a_drift.w;
-  float swirl = sin(u_time * 0.18 + a_phase.x * 0.5);
-  vec2 p = base + vec2(cx + swirl * a_drift.y * 0.4, cy);
-  p = fract(p);
-  vec2 clip = p * 2.0 - 1.0;
+  vec2 clip = a_pos * 2.0 - 1.0;
   clip.y = -clip.y;
   gl_Position = vec4(clip, 0.0, 1.0);
   gl_PointSize = a_meta.x * u_dpr;
-  v_alpha = a_meta.y;
+  vec2 d = a_pos - vec2(0.5);
+  float r = length(d) * 1.414;
+  float fade = smoothstep(1.0, 0.7, r);
+  v_alpha = a_meta.y * fade;
 }
 `
 
@@ -50,27 +41,19 @@ void main() {
 `
 
 const VERT_100 = `
-attribute vec2 a_base;
-attribute vec4 a_drift;
-attribute vec2 a_phase;
-attribute vec2 a_meta;
-uniform float u_time;
+attribute vec2 a_pos;
+attribute vec3 a_meta;
 uniform float u_dpr;
-uniform vec2 u_flow;
 varying float v_alpha;
 void main() {
-  float speed = a_drift.x;
-  vec2 base = a_base + u_flow * u_time * speed;
-  float cx = sin(base.y * 7.3 + u_time * 0.32 + a_phase.x) * a_drift.z;
-  float cy = cos(base.x * 5.7 + u_time * 0.27 + a_phase.y) * a_drift.w;
-  float swirl = sin(u_time * 0.18 + a_phase.x * 0.5);
-  vec2 p = base + vec2(cx + swirl * a_drift.y * 0.4, cy);
-  p = fract(p);
-  vec2 clip = p * 2.0 - 1.0;
+  vec2 clip = a_pos * 2.0 - 1.0;
   clip.y = -clip.y;
   gl_Position = vec4(clip, 0.0, 1.0);
   gl_PointSize = a_meta.x * u_dpr;
-  v_alpha = a_meta.y;
+  vec2 d = a_pos - vec2(0.5);
+  float r = length(d) * 1.414;
+  float fade = smoothstep(1.0, 0.7, r);
+  v_alpha = a_meta.y * fade;
 }
 `
 
@@ -115,33 +98,75 @@ function makeProgram(
   return prog
 }
 
-function buildParticleData(): Float32Array {
-  const STRIDE = 10
-  const data = new Float32Array(PARTICLE_COUNT * STRIDE)
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    const o = i * STRIDE
-    const depth = Math.pow(Math.random(), 1.6)
-    const speed = 0.012 + depth * 0.06
-    const swirlAmp = 0.005 + Math.random() * 0.015
-    const curlX = 0.008 + Math.random() * 0.022
-    const curlY = 0.006 + Math.random() * 0.018
-    data[o + 0] = Math.random()
-    data[o + 1] = Math.random()
-    data[o + 2] = speed
-    data[o + 3] = swirlAmp
-    data[o + 4] = curlX
-    data[o + 5] = curlY
-    data[o + 6] = Math.random() * Math.PI * 2
-    data[o + 7] = Math.random() * Math.PI * 2
-    data[o + 8] = 0.7 + depth * 2.6
-    data[o + 9] = 0.12 + depth * 0.42
+const positions = new Float32Array(MAX_PARTICLES * 2)
+const meta = new Float32Array(MAX_PARTICLES * 3)
+const speedMul = new Float32Array(MAX_PARTICLES)
+const initialized = { done: false }
+
+function initParticles() {
+  if (initialized.done) return
+  initialized.done = true
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    positions[i * 2] = Math.random()
+    positions[i * 2 + 1] = Math.random()
+    const depth = Math.pow(Math.random(), 1.7)
+    const size = 1.0 + depth * 1.8
+    const alpha = 0.32 + depth * 0.65
+    meta[i * 3] = size
+    meta[i * 3 + 1] = alpha
+    meta[i * 3 + 2] = 0.5 + depth * 0.9
+    speedMul[i] = 0.5 + depth * 0.9
   }
-  return data
+}
+
+function stepFlow(count: number, t: number, dt: number) {
+  const k1 = 3.1
+  const k2 = 5.7
+  const k3 = 7.9
+  const k4 = 12.0
+  const w1 = 0.11
+  const w2 = 0.07
+  const w3 = 0.05
+  const w4 = 0.03
+
+  const sin = Math.sin
+  const cos = Math.cos
+  const stepBase = FLOW_SPEED * dt
+
+  for (let i = 0; i < count; i++) {
+    const px = positions[i * 2]
+    const py = positions[i * 2 + 1]
+
+    let vx =
+      sin(py * k1 + t * w1) - cos(py * k2 + t * w2 + 1.7) +
+      0.55 * sin(py * k3 + t * w3 + 2.3) +
+      0.30 * cos(py * k4 + t * w4 + 0.6)
+
+    let vy =
+      cos(px * k1 - t * w1) + sin(px * k2 + t * w2 + 0.4) +
+      0.55 * cos(px * k3 - t * w3 + 1.1) +
+      0.30 * sin(px * k4 - t * w4 + 2.7)
+
+    vx *= 0.16
+    vy *= 0.16
+
+    const m = speedMul[i]
+    let nx = px + vx * stepBase * m
+    let ny = py + vy * stepBase * m
+
+    if (nx < 0) nx -= Math.floor(nx)
+    else if (nx >= 1) nx -= Math.floor(nx)
+    if (ny < 0) ny -= Math.floor(ny)
+    else if (ny >= 1) ny -= Math.floor(ny)
+
+    positions[i * 2] = nx
+    positions[i * 2 + 1] = ny
+  }
 }
 
 type Renderer = {
   resize: (cw: number, ch: number) => void
-  draw: (t: number, dpr: number) => void
+  draw: (t: number, dt: number, dpr: number, count: number) => void
   destroy: () => void
 }
 
@@ -154,7 +179,7 @@ function makeWebGLRenderer(canvas: HTMLCanvasElement): Renderer | null {
       preserveDrawingBuffer: false
     }) as WebGL2RenderingContext | null
 
-  let isWebGL2 = !!gl
+  const isWebGL2 = !!gl
 
   if (!gl) {
     gl = canvas.getContext("webgl", {
@@ -181,114 +206,113 @@ function makeWebGLRenderer(canvas: HTMLCanvasElement): Renderer | null {
 
   gl.useProgram(prog)
 
-  const data = buildParticleData()
-  const buf = gl.createBuffer()!
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf)
-  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)
+  const posBuf = gl.createBuffer()!
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf)
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW)
 
-  const STRIDE_BYTES = 10 * 4
-  const bind = (name: string, size: number, byteOffset: number) => {
-    const loc = gl!.getAttribLocation(prog, name)
-    if (loc < 0) return
-    gl!.enableVertexAttribArray(loc)
-    gl!.vertexAttribPointer(loc, size, gl!.FLOAT, false, STRIDE_BYTES, byteOffset)
-  }
-  bind("a_base", 2, 0)
-  bind("a_drift", 4, 2 * 4)
-  bind("a_phase", 2, 6 * 4)
-  bind("a_meta", 2, 8 * 4)
+  const metaBuf = gl.createBuffer()!
+  gl.bindBuffer(gl.ARRAY_BUFFER, metaBuf)
+  gl.bufferData(gl.ARRAY_BUFFER, meta, gl.STATIC_DRAW)
 
-  const uTime = gl.getUniformLocation(prog, "u_time")
+  const aPos = gl.getAttribLocation(prog, "a_pos")
+  const aMeta = gl.getAttribLocation(prog, "a_meta")
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf)
+  gl.enableVertexAttribArray(aPos)
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, metaBuf)
+  gl.enableVertexAttribArray(aMeta)
+  gl.vertexAttribPointer(aMeta, 3, gl.FLOAT, false, 0, 0)
+
   const uColor = gl.getUniformLocation(prog, "u_color")
   const uDpr = gl.getUniformLocation(prog, "u_dpr")
-  const uFlow = gl.getUniformLocation(prog, "u_flow")
-  gl.uniform3f(uColor, MOSS_RGB[0], MOSS_RGB[1], MOSS_RGB[2])
-  gl.uniform2f(uFlow, FLOW_DIR[0], FLOW_DIR[1])
 
   gl.enable(gl.BLEND)
-  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
   gl.clearColor(0, 0, 0, 0)
 
   return {
     resize(cw, ch) {
       gl!.viewport(0, 0, cw, ch)
     },
-    draw(t, dpr) {
-      gl!.uniform1f(uTime, t)
+    draw(t, dt, dpr, count) {
+      stepFlow(count, t, dt)
+      gl!.bindBuffer(gl!.ARRAY_BUFFER, posBuf)
+      gl!.bufferSubData(
+        gl!.ARRAY_BUFFER,
+        0,
+        positions,
+        0,
+        count * 2
+      )
       gl!.uniform1f(uDpr, dpr)
       gl!.clear(gl!.COLOR_BUFFER_BIT)
-      gl!.drawArrays(gl!.POINTS, 0, PARTICLE_COUNT)
+
+      gl!.blendFunc(gl!.ONE, gl!.ONE_MINUS_SRC_ALPHA)
+      gl!.uniform3f(uColor, DARK_RGB[0], DARK_RGB[1], DARK_RGB[2])
+      gl!.drawArrays(gl!.POINTS, 0, count)
+
+      gl!.blendFunc(gl!.ONE, gl!.ONE)
+      gl!.uniform3f(uColor, LIGHT_RGB[0], LIGHT_RGB[1], LIGHT_RGB[2])
+      gl!.drawArrays(gl!.POINTS, 0, count)
     },
     destroy() {
-      gl!.deleteBuffer(buf)
+      gl!.deleteBuffer(posBuf)
+      gl!.deleteBuffer(metaBuf)
       gl!.deleteProgram(prog)
     }
   }
 }
 
-type Particle2D = {
-  bx: number
-  by: number
-  speed: number
-  swirl: number
-  curlX: number
-  curlY: number
-  phx: number
-  phy: number
-  size: number
-  alpha: number
-}
-
 function make2DRenderer(canvas: HTMLCanvasElement): Renderer | null {
   const ctx = canvas.getContext("2d")
   if (!ctx) return null
-  const particles: Particle2D[] = []
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    const depth = Math.pow(Math.random(), 1.6)
-    particles.push({
-      bx: Math.random(),
-      by: Math.random(),
-      speed: 0.012 + depth * 0.06,
-      swirl: 0.005 + Math.random() * 0.015,
-      curlX: 0.008 + Math.random() * 0.022,
-      curlY: 0.006 + Math.random() * 0.018,
-      phx: Math.random() * Math.PI * 2,
-      phy: Math.random() * Math.PI * 2,
-      size: 0.7 + depth * 2.6,
-      alpha: 0.12 + depth * 0.42
-    })
-  }
   let cw = 0,
     ch = 0
-  const fract = (x: number) => x - Math.floor(x)
   return {
     resize(w, h) {
       cw = w
       ch = h
     },
-    draw(t, dpr) {
+    draw(t, dt, dpr, count) {
+      stepFlow(count, t, dt)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const w = cw / dpr
       const h = ch / dpr
+      ctx.globalCompositeOperation = "source-over"
       ctx.clearRect(0, 0, w, h)
-      const [r, g, b] = MOSS_RGB
-      const cr = Math.round(r * 255)
-      const cg = Math.round(g * 255)
-      const cb = Math.round(b * 255)
-      const fx = FLOW_DIR[0]
-      const fy = FLOW_DIR[1]
-      for (const p of particles) {
-        const baseX = p.bx + fx * t * p.speed
-        const baseY = p.by + fy * t * p.speed
-        const cxOff = Math.sin(baseY * 7.3 + t * 0.32 + p.phx) * p.curlX
-        const cyOff = Math.cos(baseX * 5.7 + t * 0.27 + p.phy) * p.curlY
-        const swirl = Math.sin(t * 0.18 + p.phx * 0.5) * p.swirl * 0.4
-        const x = fract(baseX + cxOff + swirl) * w
-        const y = fract(baseY + cyOff) * h
-        ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${p.alpha})`
-        ctx.beginPath()
-        ctx.arc(x, y, p.size, 0, Math.PI * 2)
-        ctx.fill()
+      const dr = Math.round(DARK_RGB[0] * 255)
+      const dg = Math.round(DARK_RGB[1] * 255)
+      const db = Math.round(DARK_RGB[2] * 255)
+      const lr = Math.round(LIGHT_RGB[0] * 255)
+      const lg = Math.round(LIGHT_RGB[1] * 255)
+      const lb = Math.round(LIGHT_RGB[2] * 255)
+      for (let pass = 0; pass < 2; pass++) {
+        ctx.globalCompositeOperation = pass === 0 ? "source-over" : "lighter"
+        for (let i = 0; i < count; i++) {
+          const px = positions[i * 2]
+          const py = positions[i * 2 + 1]
+          const dx = px - 0.5
+          const dy = py - 0.5
+          const rr = Math.sqrt(dx * dx + dy * dy) * 1.414
+          const fade =
+            rr <= 0.7
+              ? 1
+              : rr >= 1.0
+              ? 0
+              : 1 - (rr - 0.7) / 0.3
+          const size = meta[i * 3]
+          const alpha = meta[i * 3 + 1] * fade
+          if (alpha <= 0.005) continue
+          if (pass === 0) {
+            ctx.fillStyle = `rgba(${dr}, ${dg}, ${db}, ${alpha})`
+          } else {
+            ctx.fillStyle = `rgba(${lr}, ${lg}, ${lb}, ${alpha})`
+          }
+          ctx.beginPath()
+          ctx.arc(px * w, py * h, size, 0, Math.PI * 2)
+          ctx.fill()
+        }
       }
     },
     destroy() {}
@@ -297,6 +321,8 @@ function make2DRenderer(canvas: HTMLCanvasElement): Renderer | null {
 
 export function HighlightOverlay() {
   useEffect(() => {
+    initParticles()
+
     const wrap = document.createElement("div")
     wrap.style.cssText = [
       "position: fixed",
@@ -310,8 +336,7 @@ export function HighlightOverlay() {
       "overflow: hidden",
       `transition: opacity ${FADE_MS}ms ease`,
       "will-change: opacity",
-      `mask-image: ${WRAP_MASK}`,
-      `-webkit-mask-image: ${WRAP_MASK}`
+      "isolation: auto"
     ].join(";")
 
     const canvas = document.createElement("canvas")
@@ -320,7 +345,7 @@ export function HighlightOverlay() {
       "inset: 0",
       "width: 100%",
       "height: 100%",
-      "opacity: 0.8"
+      "opacity: 1"
     ].join(";")
     wrap.appendChild(canvas)
     document.body.appendChild(wrap)
@@ -342,13 +367,15 @@ export function HighlightOverlay() {
     }
 
     let raf = 0
-    const start = performance.now()
+    let lastT = performance.now()
+    const start = lastT
 
     const tick = () => {
       const el = useStore.getState().highlighted
 
       if (!el) {
         if (wrap.style.opacity !== "0") wrap.style.opacity = "0"
+        lastT = performance.now()
         raf = requestAnimationFrame(tick)
         return
       }
@@ -356,6 +383,7 @@ export function HighlightOverlay() {
       const rect = el.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) {
         if (wrap.style.opacity !== "0") wrap.style.opacity = "0"
+        lastT = performance.now()
         raf = requestAnimationFrame(tick)
         return
       }
@@ -377,8 +405,17 @@ export function HighlightOverlay() {
         renderer!.resize(cw, ch)
       }
 
-      const t = (performance.now() - start) * 0.001
-      renderer!.draw(t, dpr)
+      const targetCount = Math.min(
+        MAX_PARTICLES,
+        Math.floor(w * h * DENSITY_PER_PX)
+      )
+
+      const now = performance.now()
+      const dt = Math.min(0.05, (now - lastT) / 1000)
+      lastT = now
+      const t = (now - start) * 0.001
+
+      renderer!.draw(t, dt, dpr, targetCount)
 
       raf = requestAnimationFrame(tick)
     }

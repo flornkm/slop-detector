@@ -40,6 +40,8 @@ export function applyTexturedMaterials(root: THREE.Object3D) {
     if (!std.isMeshStandardMaterial) return
 
     if (std.name === "GC_Orange") std.color.set(CABLE_ORANGE)
+    if (std.name === "GC_PlasticBody") std.color.set("#d6cfc4")
+    if (std.name === "GC_Button") std.color.set("#dcd5ca")
 
     const profile = GRAIN_PROFILE[std.name]
 
@@ -73,6 +75,11 @@ export function applyTexturedMaterials(root: THREE.Object3D) {
       std.envMapIntensity = 1.1
     } else if (std.name === "GC_Screen") {
       std.envMapIntensity = 1.4
+    } else if (std.name === "GC_HoleInterior") {
+      std.color.set("#0a0c0d")
+      std.roughness = 0.55
+      std.metalness = 0.0
+      std.envMapIntensity = 0.05
     }
 
     std.needsUpdate = true

@@ -40,7 +40,7 @@ export default function Popup() {
         onClick={() => setEnabled(!enabled)}
         aria-pressed={enabled}
         className="flex flex-col items-center justify-center cursor-pointer transition-colors">
-        <PowerGlyph color={color} />
+        <PowerGlyph color={color} on={enabled} />
         <div
           className="mt-2 text-[12px] lowercase"
           style={{ color, letterSpacing: "0.04em" }}>
@@ -51,18 +51,41 @@ export default function Popup() {
   )
 }
 
-function PowerGlyph({ color }: { color: string }) {
+function PowerGlyph({ color, on }: { color: string; on: boolean }) {
+  const fill = on ? color : "none"
+  const stroke = color
+  const sw = 2.4
   return (
     <svg
-      width="44"
-      height="44"
+      width="56"
+      height="56"
       viewBox="0 0 64 64"
-      fill="none"
       className="block mx-auto transition-colors"
       aria-hidden>
-      <path
-        d="M32 8 C 30 8 28.5 9.5 28.5 11.5 L 28.5 27 C 28.5 29 30 30.5 32 30.5 C 34 30.5 35.5 29 35.5 27 L 35.5 11.5 C 35.5 9.5 34 8 32 8 Z M 21 14.5 C 13 19 8 27 8 36 C 8 49 18.7 59.5 32 59.5 C 45.3 59.5 56 49 56 36 C 56 27 51 19 43 14.5 C 41.5 13.5 39.5 14 38.5 15.5 C 37.5 17 38 19 39.5 20 C 45.5 23.5 49 29.5 49 36 C 49 45.4 41.4 53 32 53 C 22.6 53 15 45.4 15 36 C 15 29.5 18.5 23.5 24.5 20 C 26 19 26.5 17 25.5 15.5 C 24.5 14 22.5 13.5 21 14.5 Z"
-        fill={color}
+      <circle
+        cx="32"
+        cy="14"
+        r="7"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={sw}
+      />
+      <rect
+        x="23"
+        y="25"
+        width="18"
+        height="14"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="miter"
+      />
+      <polygon
+        points="32,43 43,57 21,57"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="miter"
       />
     </svg>
   )
