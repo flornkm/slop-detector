@@ -1,37 +1,22 @@
 import { useStorage } from "@plasmohq/storage/hook"
 
+import "./style.compiled.css"
+
 export default function Popup() {
   const [enabled, setEnabled] = useStorage<boolean>("enabled", true)
 
   return (
-    <div
-      style={{
-        width: 220,
-        padding: 14,
-        fontFamily: "ui-sans-serif, system-ui, sans-serif",
-        background: "#f0eae0",
-        color: "#1a1a1d"
-      }}>
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
-        SLOB DETECTOR
-      </div>
+    <div className="w-[220px] bg-cream text-ink p-3.5 font-sans">
+      <div className="text-[13px] font-semibold mb-2.5">SLOB DETECTOR</div>
       <button
         onClick={() => setEnabled(!enabled)}
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          background: enabled ? "#ff5b1a" : "#1a1a1d",
-          color: enabled ? "#1a1a1d" : "#f0eae0",
-          fontWeight: 700,
-          letterSpacing: 1,
-          fontSize: 12,
-          border: "none",
-          borderRadius: 6,
-          cursor: "pointer"
-        }}>
+        className={[
+          "w-full px-3 py-2.5 text-xs font-bold tracking-widest border-0 rounded-md cursor-pointer",
+          enabled ? "bg-slob text-ink" : "bg-ink text-cream"
+        ].join(" ")}>
         {enabled ? "ACTIVE" : "OFF"}
       </button>
-      <div style={{ fontSize: 11, color: "#5a5040", marginTop: 8 }}>
+      <div className="mt-2 text-[11px] text-muted">
         Toggles the overlay on every page.
       </div>
     </div>

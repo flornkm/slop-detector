@@ -45,12 +45,16 @@ export function AIDetector() {
 
     const content = extractContent(el)
     if (!content) {
+      console.log("[slob] empty content, skipping", el.tagName)
       detectedFor.current.add(el)
       return
     }
 
     detectedFor.current.add(el)
     inFlight.current = true
+    console.log(
+      `[slob] dispatch detect | <${el.tagName.toLowerCase()}> | ${content.slice(0, 60)}…`
+    )
     detectAI(content)
       .then((rating) => {
         if (rating === null) {
@@ -63,7 +67,7 @@ export function AIDetector() {
         useStore.getState().setAiRating(rating)
       })
       .catch((err) => {
-        console.error("[slob] detection failed:", err)
+        console.error("[slob] detection failed:", err?.message || err, err)
       })
       .finally(() => {
         inFlight.current = false

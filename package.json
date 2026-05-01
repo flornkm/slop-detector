@@ -5,9 +5,11 @@
   "description": "A Geiger-counter overlay that reacts to whatever page you're on.",
   "author": "Florian Kiem",
   "scripts": {
-    "dev": "plasmo dev",
-    "build": "plasmo build",
-    "package": "plasmo package"
+    "dev": "concurrently -k -n css,plasmo -c green,magenta \"bun run css:watch\" \"plasmo dev\"",
+    "build": "bun run css:build && plasmo build",
+    "package": "plasmo package",
+    "css:build": "tailwindcss -i ./src/style.css -o ./src/style.compiled.css --minify",
+    "css:watch": "tailwindcss -i ./src/style.css -o ./src/style.compiled.css --watch"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.83",
@@ -23,16 +25,22 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
     "@types/chrome": "^0.0.279",
     "@types/howler": "^2.2.12",
     "@types/node": "^22.7.6",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.169.0",
+    "concurrently": "^9.2.1",
+    "tailwindcss": "^4.2.4",
     "typescript": "^5.6.3"
   },
   "manifest": {
     "host_permissions": ["<all_urls>"],
-    "permissions": ["storage", "activeTab"]
+    "permissions": ["storage", "activeTab", "offscreen"],
+    "content_security_policy": {
+      "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost; object-src 'self'"
+    }
   }
 }

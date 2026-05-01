@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #f0eae0;
+  --color-ink: #1a1a1d;
+  --color-slob: #ff5e10;
+  --color-moss: #519f82;
+  --color-muted: #5a5040;
+}

@@ -1,10 +1,23 @@
 import { useEffect } from "react"
 import { useStore } from "~lib/store"
 
-const PAD = 56
-const GRADIENT_BLUR_PX = 42
+const PAD = 84
+const GRADIENT_BLUR_PX = 38
 const DOT_BLUR_PX = 0
 const FADE_MS = 180
+
+const WRAP_MASK =
+  "radial-gradient(ellipse 90% 90% at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 25%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.1) 80%, rgba(0,0,0,0) 100%)"
+
+const GRADIENT_MASK = [
+  "radial-gradient(ellipse 80% 85% at 38% 42%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 22%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.12) 78%, rgba(0,0,0,0) 100%)",
+  "radial-gradient(ellipse 78% 82% at 64% 58%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 22%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 78%, rgba(0,0,0,0) 100%)"
+].join(",")
+
+const DOT_MASK = [
+  "radial-gradient(ellipse 75% 80% at 42% 46%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.88) 22%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.15) 78%, rgba(0,0,0,0) 100%)",
+  "radial-gradient(ellipse 80% 78% at 60% 56%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.82) 22%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.12) 78%, rgba(0,0,0,0) 100%)"
+].join(",")
 
 const DOT_GRID_SPACING = 9
 const DOT_RADIUS = 1.1
@@ -18,9 +31,6 @@ const GRAD_STOPS: { offset: number; color: string }[] = [
   { offset: 0.5, color: "rgba(110, 190, 160, 0.5)" },
   { offset: 1, color: "rgba(70, 145, 120, 0.55)" }
 ]
-
-const MASK_IMAGE =
-  "radial-gradient(ellipse at center, rgba(0,0,0,1) 35%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0) 100%)"
 
 function waveOpacity(localT: number) {
   let phase = (localT % WAVE_DURATION_S) / WAVE_DURATION_S
@@ -41,8 +51,11 @@ export function HighlightOverlay() {
       "pointer-events: none",
       "z-index: 2147483646",
       "opacity: 0",
+      "overflow: hidden",
       `transition: opacity ${FADE_MS}ms ease`,
-      "will-change: transform, opacity"
+      "will-change: transform, opacity",
+      `mask-image: ${WRAP_MASK}`,
+      `-webkit-mask-image: ${WRAP_MASK}`
     ].join(";")
 
     const gradientCanvas = document.createElement("canvas")
@@ -52,8 +65,8 @@ export function HighlightOverlay() {
       "width: 100%",
       "height: 100%",
       `filter: blur(${GRADIENT_BLUR_PX}px) saturate(1.3)`,
-      `mask-image: ${MASK_IMAGE}`,
-      `-webkit-mask-image: ${MASK_IMAGE}`
+      `mask-image: ${GRADIENT_MASK}`,
+      `-webkit-mask-image: ${GRADIENT_MASK}`
     ].join(";")
 
     const dotCanvas = document.createElement("canvas")
@@ -63,8 +76,8 @@ export function HighlightOverlay() {
       "width: 100%",
       "height: 100%",
       DOT_BLUR_PX > 0 ? `filter: blur(${DOT_BLUR_PX}px)` : "",
-      `mask-image: ${MASK_IMAGE}`,
-      `-webkit-mask-image: ${MASK_IMAGE}`
+      `mask-image: ${DOT_MASK}`,
+      `-webkit-mask-image: ${DOT_MASK}`
     ]
       .filter(Boolean)
       .join(";")
