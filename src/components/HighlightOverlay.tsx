@@ -200,7 +200,7 @@ function makeWebGLRenderer(canvas: HTMLCanvasElement): Renderer | null {
       isWebGL2 ? FRAG_300 : FRAG_100
     )
   } catch (err) {
-    console.warn("[slob-detector] particle shader failed:", err)
+    console.warn("[slop-detector] particle shader failed:", err)
     return null
   }
 
@@ -354,7 +354,7 @@ export function HighlightOverlay() {
     try {
       renderer = makeWebGLRenderer(canvas)
     } catch (err) {
-      console.warn("[slob-detector] WebGL renderer failed, falling back:", err)
+      console.warn("[slop-detector] WebGL renderer failed, falling back:", err)
     }
     if (!renderer) {
       renderer = make2DRenderer(canvas)

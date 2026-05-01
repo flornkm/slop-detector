@@ -1,6 +1,6 @@
 import * as THREE from "three"
 
-const FONT_FAMILY = "Commit Mono Slob"
+const FONT_FAMILY = "Commit Mono Slop"
 const FONT_FALLBACK = `"${FONT_FAMILY}", ui-monospace, "SFMono-Regular", Menlo, monospace`
 
 let fontLoaded = false
@@ -16,7 +16,7 @@ export function loadFont(url: string): Promise<void> {
       ;(document as any).fonts.add(font)
       fontLoaded = true
     } catch (e) {
-      console.warn("[slob] font load failed, using fallback:", e)
+      console.warn("[slop] font load failed, using fallback:", e)
     } finally {
       fontLoading = null
     }

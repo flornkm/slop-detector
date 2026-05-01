@@ -19,12 +19,12 @@ async function ensureOffscreen(): Promise<void> {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "SLOB_DETECT") return
+  if (msg?.type !== "SLOP_DETECT") return
   ;(async () => {
     try {
       await ensureOffscreen()
       const result = await chrome.runtime.sendMessage({
-        type: "SLOB_DETECT_RUN",
+        type: "SLOP_DETECT_RUN",
         content: msg.content
       })
       sendResponse(result)

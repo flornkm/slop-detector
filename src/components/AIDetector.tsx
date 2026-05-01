@@ -45,7 +45,7 @@ export function AIDetector() {
 
     const content = extractContent(el)
     if (!content) {
-      console.log("[slob] empty content, skipping", el.tagName)
+      console.log("[slop] empty content, skipping", el.tagName)
       detectedFor.current.add(el)
       return
     }
@@ -53,21 +53,21 @@ export function AIDetector() {
     detectedFor.current.add(el)
     inFlight.current = true
     console.log(
-      `[slob] dispatch detect | <${el.tagName.toLowerCase()}> | ${content.slice(0, 60)}…`
+      `[slop] dispatch detect | <${el.tagName.toLowerCase()}> | ${content.slice(0, 60)}…`
     )
     detectAI(content)
       .then((rating) => {
         if (rating === null) {
-          console.warn("[slob] could not parse rating")
+          console.warn("[slop] could not parse rating")
           return
         }
         console.log(
-          `[slob] rating: ${rating.toFixed(2)} | <${el.tagName.toLowerCase()}> | ${content.slice(0, 80)}`
+          `[slop] rating: ${rating.toFixed(2)} | <${el.tagName.toLowerCase()}> | ${content.slice(0, 80)}`
         )
         useStore.getState().setAiRating(rating)
       })
       .catch((err) => {
-        console.error("[slob] detection failed:", err?.message || err, err)
+        console.error("[slop] detection failed:", err?.message || err, err)
       })
       .finally(() => {
         inFlight.current = false

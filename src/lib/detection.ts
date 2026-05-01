@@ -7,7 +7,7 @@ export async function detectAI(content: string): Promise<number | null> {
   const trimmed = content.slice(0, MAX_CONTENT_LEN)
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
-      { type: "SLOB_DETECT", content: trimmed },
+      { type: "SLOP_DETECT", content: trimmed },
       (response: DetectResponse | undefined) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message))

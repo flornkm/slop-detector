@@ -50,11 +50,11 @@ let loading: Promise<MLCEngineInterface> | null = null
 async function getEngine(): Promise<MLCEngineInterface> {
   if (engine) return engine
   if (loading) return loading
-  console.log("[slob offscreen] loading model", MODEL_ID)
+  console.log("[slop offscreen] loading model", MODEL_ID)
   loading = CreateMLCEngine(MODEL_ID, {
     initProgressCallback: (p) => {
       console.log(
-        `[slob offscreen] ${(p.progress * 100).toFixed(1)}%`,
+        `[slop offscreen] ${(p.progress * 100).toFixed(1)}%`,
         p.text
       )
     }
@@ -62,12 +62,12 @@ async function getEngine(): Promise<MLCEngineInterface> {
     .then((e) => {
       engine = e
       loading = null
-      console.log("[slob offscreen] ready")
+      console.log("[slop offscreen] ready")
       return e
     })
     .catch((err) => {
       loading = null
-      console.error("[slob offscreen] load failed:", err)
+      console.error("[slop offscreen] load failed:", err)
       throw err
     })
   return loading
@@ -166,18 +166,18 @@ async function detect(content: string): Promise<number | null> {
   const heur = heuristicScore(trimmed)
   const llm = await llmScore(trimmed)
   if (llm === null) {
-    console.log(`[slob offscreen] heur=${heur.toFixed(2)} llm=null`)
+    console.log(`[slop offscreen] heur=${heur.toFixed(2)} llm=null`)
     return heur
   }
   const final = Math.max(heur, llm)
   console.log(
-    `[slob offscreen] heur=${heur.toFixed(2)} llm=${llm.toFixed(2)} → ${final.toFixed(2)}`
+    `[slop offscreen] heur=${heur.toFixed(2)} llm=${llm.toFixed(2)} → ${final.toFixed(2)}`
   )
   return final
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "SLOB_DETECT_RUN") return
+  if (msg?.type !== "SLOP_DETECT_RUN") return
   detect(msg.content)
     .then((rating) => sendResponse({ rating }))
     .catch((err) =>
@@ -189,7 +189,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 export default function Offscreen() {
   return (
     <div style={{ padding: 16, fontFamily: "system-ui, sans-serif" }}>
-      Slob Detector inference worker
+      Slop Detector inference worker
     </div>
   )
 }

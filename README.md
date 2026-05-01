@@ -1,4 +1,4 @@
-# slob-detector
+# slop-detector
 
 Chrome extension that drops a Geiger-counter overlay onto every page. The probe is draggable; the body sits in the bottom-right corner.
 
