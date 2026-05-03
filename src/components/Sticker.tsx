@@ -164,9 +164,6 @@ export function Sticker({
     meshRef.current.geometry.dispose()
     meshRef.current.geometry = geo
     installed.current = true
-    console.log(
-      `[sticker] conformed; ${verts.length / 3} verts on body surface`
-    )
   })
 
   return (

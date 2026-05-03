@@ -46,19 +46,9 @@ export function AIDetector() {
     detectedFor.current.add(el)
     inFlight.current = true
 
-    const tag = el.tagName.toLowerCase()
     detectAI(el)
       .then((result) => {
-        if (!result) {
-          console.log(`[slop] no scoreable content | <${tag}>`)
-          return
-        }
-        const signals = result.signals.length
-          ? result.signals.join("; ")
-          : "(no signals)"
-        console.log(
-          `[slop] rating ${result.rating.toFixed(2)} | <${tag}> | ${signals}`
-        )
+        if (!result) return
         useStore.getState().setAiRating(result.rating)
       })
       .catch((err) => {
