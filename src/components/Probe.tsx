@@ -11,10 +11,9 @@ const PROBE_Y = 0.014
 const REST_ANGLE = Math.PI
 // Probe sits on the body's top surface initially.
 const ATTACHED_Z = -0.02
-// Spring constants — match DeviceTilt's auto slide-in feel exactly.
-const SLIDE_SPRING_K = 0.028
-const SLIDE_DAMPING = 0.9
-const SETTLED_THRESHOLD = 0.0025
+// Slide-in: pure exponential ease-out, matches DeviceTilt's DOCK_EASE.
+const SLIDE_EASE = 0.06
+const SETTLED_THRESHOLD = 0.0008
 
 const BODY_HALF_X = 0.053
 const BODY_HALF_Z = 0.033
@@ -32,8 +31,6 @@ export function Probe({ node }: { node: THREE.Object3D }) {
 
   const target = useRef(new THREE.Vector3())
   const settled = useRef(false)
-  const slideVelX = useRef(0)
-  const slideVelZ = useRef(0)
 
   // Initial probe position: attached to top of body, off-screen with body. Spring physics
   // (matching DeviceTilt) will pull it from here to its rest position above the body.
@@ -169,24 +166,16 @@ export function Probe({ node }: { node: THREE.Object3D }) {
     const prevZ = node.position.z
 
     if (!settled.current && !dragging.current) {
-      // Spring-based slide-in toward rest, matching DeviceTilt's auto slide animation.
-      slideVelX.current += (rest.x - node.position.x) * SLIDE_SPRING_K
-      slideVelX.current *= SLIDE_DAMPING
-      node.position.x += slideVelX.current
-      slideVelZ.current += (rest.z - node.position.z) * SLIDE_SPRING_K
-      slideVelZ.current *= SLIDE_DAMPING
-      node.position.z += slideVelZ.current
+      // Pure exponential ease-out toward rest — matches DeviceTilt's DOCK_EASE.
+      node.position.x += (rest.x - node.position.x) * SLIDE_EASE
+      node.position.z += (rest.z - node.position.z) * SLIDE_EASE
       node.position.y = PROBE_Y
 
       if (
         Math.abs(rest.x - node.position.x) < SETTLED_THRESHOLD &&
-        Math.abs(rest.z - node.position.z) < SETTLED_THRESHOLD &&
-        Math.abs(slideVelX.current) < 0.0008 &&
-        Math.abs(slideVelZ.current) < 0.0008
+        Math.abs(rest.z - node.position.z) < SETTLED_THRESHOLD
       ) {
         node.position.copy(rest)
-        slideVelX.current = 0
-        slideVelZ.current = 0
         settled.current = true
         target.current.copy(rest)
       }

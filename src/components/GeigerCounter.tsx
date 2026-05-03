@@ -15,6 +15,7 @@ import { KeyLight } from "./KeyLight"
 import { Labels } from "./Labels"
 import { PowerButton } from "./PowerButton"
 import { Probe } from "./Probe"
+import { Sticker } from "./Sticker"
 import { Triangle } from "./Triangle"
 
 useGLTF.preload(geigerUrl)
@@ -73,6 +74,7 @@ export function GeigerCounter() {
           <Display hidden={parts.screen} />
           <Labels />
           <ButtonIcons />
+          <Sticker bodyRoot={parts.body} />
         </DeviceTilt>
         {parts.probe && (
           <>

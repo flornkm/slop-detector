@@ -1,50 +1,61 @@
-// TODO: real detection pipeline goes here. Currently AIDetector calls
-// Math.random() inline and skips this round-trip entirely. When wiring in a
-// real model, send content via chrome.runtime.sendMessage to the offscreen
-// worker (see src/tabs/offscreen.tsx) and resolve with a number in [0, 1].
+import { scoreImage, type ImageScore } from "./imageDetect"
+import {
+  findSocialPostText,
+  isTwitterTweet,
+  isVideoLike,
+  scoreIframeEmbed,
+  scoreSocialImage,
+  scoreTwitterTweet,
+  scoreVideoElement
+} from "./socialDetect"
+import { scoreText, type TextScore } from "./textHeuristic"
 
-const MAX_CONTENT_LEN = 1200
+const IMAGE_TAGS = new Set(["IMG", "PICTURE", "FIGURE"])
 
-type DetectResponse = { rating?: number | null; error?: string }
+export type DetectResult = TextScore | ImageScore
 
-export async function detectAI(content: string): Promise<number | null> {
-  if (!content) return null
-  const trimmed = content.slice(0, MAX_CONTENT_LEN)
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      { type: "SLOP_DETECT", content: trimmed },
-      (response: DetectResponse | undefined) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message))
-          return
-        }
-        if (!response) {
-          reject(new Error("no response from background"))
-          return
-        }
-        if (response.error) {
-          reject(new Error(response.error))
-          return
-        }
-        resolve(response.rating ?? null)
-      }
-    )
-  })
-}
+export async function detectAI(el: Element): Promise<DetectResult | null> {
+  // 1. Twitter / X tweets — extract clean tweet text + check author/AI labels
+  if (isTwitterTweet(el)) {
+    return scoreTwitterTweet(el)
+  }
 
-export function extractContent(el: Element): string {
-  const tag = el.tagName
-  if (tag === "IMG") {
+  // 2. Videos and known video embeds — URL-host fingerprinting
+  if (isVideoLike(el)) {
+    if (el.tagName === "VIDEO") {
+      return scoreVideoElement(el as HTMLVideoElement)
+    }
+    if (el.tagName === "IFRAME") {
+      return scoreIframeEmbed(el as HTMLIFrameElement)
+    }
+  }
+
+  // 3. Images — on Twitter/LinkedIn, fold the surrounding post text into the
+  //    rating (max merge). Elsewhere, plain URL heuristic.
+  if (el.tagName === "IMG") {
     const img = el as HTMLImageElement
-    return `[image] alt="${img.alt || ""}" src=${img.src.slice(0, 200)}`
+    const src = img.currentSrc || img.src
+    const postText = findSocialPostText(el)
+    return postText ? scoreSocialImage(src, postText) : scoreImage(src)
   }
-  if (tag === "A") {
-    const a = el as HTMLAnchorElement
-    const text = a.textContent?.trim().slice(0, 400) ?? ""
-    return `[link] "${text}" -> ${a.href}`
+  if (IMAGE_TAGS.has(el.tagName)) {
+    const inner = el.querySelector("img") as HTMLImageElement | null
+    const src = inner?.currentSrc || inner?.src || ""
+    if (src) {
+      const postText = findSocialPostText(el)
+      return postText ? scoreSocialImage(src, postText) : scoreImage(src)
+    }
+    // fall through to text
   }
-  if (tag === "PICTURE" || tag === "FIGURE" || tag === "VIDEO" || tag === "SVG") {
-    return `[${tag.toLowerCase()}] ${el.textContent?.trim().slice(0, 400) ?? ""}`
+
+  // 4. Links — score the visible link text
+  if (el.tagName === "A") {
+    const text = el.textContent?.trim() ?? ""
+    return text ? scoreText(text) : null
   }
-  return el.textContent?.trim() ?? ""
+
+  // 5. Default: text content
+  const text = el.textContent?.trim() ?? ""
+  if (!text) return null
+  return scoreText(text)
 }

@@ -1,14 +1,16 @@
 import { useFrame } from "@react-three/fiber"
 import { useRef } from "react"
+import { detectAI } from "~lib/detection"
 import { useStore } from "~lib/store"
 
-const HOVER_THRESHOLD_S = 2.0
+const HOVER_THRESHOLD_S = 1.0
 const RATING_DECAY = 0.92
 
 export function AIDetector() {
   const lastEl = useRef<Element | null>(null)
   const enteredAt = useRef(0)
   const detectedFor = useRef<WeakSet<Element>>(new WeakSet())
+  const inFlight = useRef(false)
 
   useFrame(({ clock }) => {
     const state = useStore.getState()
@@ -38,17 +40,33 @@ export function AIDetector() {
       return
     }
 
+    if (inFlight.current) return
     if (detectedFor.current.has(el)) return
     if (t - enteredAt.current < HOVER_THRESHOLD_S) return
     detectedFor.current.add(el)
+    inFlight.current = true
 
-    // TODO: replace this random rating with real AI-detection logic
-    // (vision model for images, text classifier for text, etc.)
-    const rating = Math.random()
-    console.log(
-      `[slop] random rating: ${rating.toFixed(2)} | <${el.tagName.toLowerCase()}>`
-    )
-    useStore.getState().setAiRating(rating)
+    const tag = el.tagName.toLowerCase()
+    detectAI(el)
+      .then((result) => {
+        if (!result) {
+          console.log(`[slop] no scoreable content | <${tag}>`)
+          return
+        }
+        const signals = result.signals.length
+          ? result.signals.join("; ")
+          : "(no signals)"
+        console.log(
+          `[slop] rating ${result.rating.toFixed(2)} | <${tag}> | ${signals}`
+        )
+        useStore.getState().setAiRating(result.rating)
+      })
+      .catch((err) => {
+        console.error("[slop] detect failed:", err)
+      })
+      .finally(() => {
+        inFlight.current = false
+      })
   })
 
   return null

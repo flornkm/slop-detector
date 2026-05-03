@@ -1,36 +1,39 @@
-const OFFSCREEN_PATH = "tabs/offscreen.html"
+import { Storage } from "@plasmohq/storage"
 
-let creating: Promise<void> | null = null
+// The toolbar icon has no popup. Clicking it toggles the `enabled` flag in
+// extension storage; content scripts mounted on every page subscribe to that
+// flag (via @plasmohq/storage hook) and mount/unmount the 3D device + overlay
+// accordingly. The badge below the icon shows OFF when disabled.
 
-async function ensureOffscreen(): Promise<void> {
-  const has = await chrome.offscreen.hasDocument?.()
-  if (has) return
-  if (creating) return creating
-  creating = chrome.offscreen
-    .createDocument({
-      url: OFFSCREEN_PATH,
-      reasons: [chrome.offscreen.Reason.WORKERS],
-      justification: "Run WebLLM inference for AI content detection"
-    })
-    .finally(() => {
-      creating = null
-    })
-  return creating
+const storage = new Storage()
+
+async function setBadge(enabled: boolean) {
+  await chrome.action.setBadgeText({ text: enabled ? "" : "OFF" })
+  await chrome.action.setBadgeBackgroundColor({ color: "#1a1a1d" })
+  await chrome.action.setTitle({
+    title: enabled
+      ? "AI Slop Detector — click to disable"
+      : "AI Slop Detector — click to enable"
+  })
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "SLOP_DETECT") return
-  ;(async () => {
-    try {
-      await ensureOffscreen()
-      const result = await chrome.runtime.sendMessage({
-        type: "SLOP_DETECT_RUN",
-        content: msg.content
-      })
-      sendResponse(result)
-    } catch (err) {
-      sendResponse({ error: String((err as Error)?.message || err) })
-    }
-  })()
-  return true
+// Initialise badge state on service worker startup.
+;(async () => {
+  const v = await storage.get<boolean>("enabled")
+  await setBadge(v ?? true)
+})()
+
+// Keep the badge in sync if the value changes from anywhere (e.g. another tab
+// or the storage hook running in a content script).
+storage.watch({
+  enabled: ({ newValue }) => {
+    void setBadge(Boolean(newValue ?? true))
+  }
+})
+
+chrome.action.onClicked.addListener(async () => {
+  const current = await storage.get<boolean>("enabled")
+  const next = !(current ?? true)
+  await storage.set("enabled", next)
+  await setBadge(next)
 })

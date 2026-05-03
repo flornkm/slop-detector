@@ -12,11 +12,11 @@ const SPRING_K = 0.06
 const DAMPING = 0.92
 const PUSH_IMPULSE = -0.55
 
-// Auto slide-in (softer + slower for a smoother entrance)
+// Auto slide-in: exponential ease-out toward (0, 0). No springs, no velocity,
+// just a smooth linear interpolation. Per-frame fraction tuned for ~1s glide.
 const INITIAL_OFFSET_X = 0.1 // off to the right (world units) — only a small sliver peeks
-const DOCK_SPRING_K = 0.028
-const DOCK_DAMPING = 0.9
-const DOCKED_THRESHOLD = 0.0025
+const DOCK_EASE = 0.06
+const DOCKED_THRESHOLD = 0.0008
 
 // Offset-driven rotation so the device shows its sides during the slide-in
 const YAW_PER_OFFSET_X = 6.5
@@ -34,8 +34,6 @@ export function DeviceTilt({ children }: { children: React.ReactNode }) {
   // Auto slide-in offsets
   const offX = useRef(INITIAL_OFFSET_X)
   const offZ = useRef(0)
-  const velX = useRef(0)
-  const velZ = useRef(0)
   const docked = useRef(false)
 
   // Probe is "released" the moment the body starts moving in
@@ -52,25 +50,17 @@ export function DeviceTilt({ children }: { children: React.ReactNode }) {
     v.current *= DAMPING
     x.current += v.current
 
-    // Auto slide toward (0, 0)
+    // Auto slide toward (0, 0) — pure exponential ease-out, no spring/damping
     if (!docked.current) {
-      velX.current += (0 - offX.current) * DOCK_SPRING_K
-      velX.current *= DOCK_DAMPING
-      offX.current += velX.current
-      velZ.current += (0 - offZ.current) * DOCK_SPRING_K
-      velZ.current *= DOCK_DAMPING
-      offZ.current += velZ.current
+      offX.current += (0 - offX.current) * DOCK_EASE
+      offZ.current += (0 - offZ.current) * DOCK_EASE
 
       if (
         Math.abs(offX.current) < DOCKED_THRESHOLD &&
-        Math.abs(offZ.current) < DOCKED_THRESHOLD &&
-        Math.abs(velX.current) < 0.0008 &&
-        Math.abs(velZ.current) < 0.0008
+        Math.abs(offZ.current) < DOCKED_THRESHOLD
       ) {
         offX.current = 0
         offZ.current = 0
-        velX.current = 0
-        velZ.current = 0
         docked.current = true
         useStore.getState().setBodyDocked(true)
       }
