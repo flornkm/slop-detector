@@ -3,12 +3,41 @@ import { useStore } from "~lib/store"
 
 const PAD = 0
 const FADE_MS = 220
-const MAX_PARTICLES = 20000
-const DENSITY_PER_PX = 0.0055
-const FLOW_SPEED = 0.045
+const MAX_PARTICLES = 200000
 
-const LIGHT_RGB: [number, number, number] = [180 / 255, 250 / 255, 205 / 255]
-const DARK_RGB: [number, number, number] = [22 / 255, 60 / 255, 40 / 255]
+const DENSITY_NORMAL = 0.090
+const DENSITY_ALARM = 0.180
+const FLOW_SPEED_NORMAL = 0.045
+const FLOW_SPEED_ALARM = 0.20
+
+// Three-tier color thresholds, all on aiRating directly.
+//   0.00 - 0.30  -> green
+//   0.30 - 0.70  -> yellow / orange
+//   0.70 - 1.00  -> red
+const GREEN_TO_YELLOW_LOW = 0.25
+const GREEN_TO_YELLOW_HIGH = 0.32
+const YELLOW_TO_RED_LOW = 0.65
+const YELLOW_TO_RED_HIGH = 0.72
+
+const COLOR_NEUTRAL_DARK: [number, number, number] = [22 / 255, 56 / 255, 38 / 255]
+const COLOR_GREEN_DARK: [number, number, number] = [18 / 255, 110 / 255, 56 / 255]
+const COLOR_YELLOW_DARK: [number, number, number] = [200 / 255, 130 / 255, 0 / 255]
+const COLOR_RED_DARK: [number, number, number] = [120 / 255, 8 / 255, 14 / 255]
+
+const COLOR_NEUTRAL_LIGHT: [number, number, number] = [150 / 255, 235 / 255, 185 / 255]
+const COLOR_GREEN_LIGHT: [number, number, number] = [120 / 255, 245 / 255, 170 / 255]
+const COLOR_YELLOW_LIGHT: [number, number, number] = [255 / 255, 220 / 255, 110 / 255]
+const COLOR_RED_LIGHT: [number, number, number] = [255 / 255, 130 / 255, 125 / 255]
+
+
+function smoothstepN(e0: number, e1: number, x: number) {
+  const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)))
+  return t * t * (3 - 2 * t)
+}
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
 
 const VERT_300 = `#version 300 es
 in vec2 a_pos;
@@ -110,8 +139,8 @@ function initParticles() {
     positions[i * 2] = Math.random()
     positions[i * 2 + 1] = Math.random()
     const depth = Math.pow(Math.random(), 1.7)
-    const size = 1.0 + depth * 1.8
-    const alpha = 0.32 + depth * 0.65
+    const size = 0.5 + depth * 0.9
+    const alpha = 0.40 + depth * 0.45
     meta[i * 3] = size
     meta[i * 3 + 1] = alpha
     meta[i * 3 + 2] = 0.5 + depth * 0.9
@@ -119,7 +148,7 @@ function initParticles() {
   }
 }
 
-function stepFlow(count: number, t: number, dt: number) {
+function stepFlow(count: number, t: number, dt: number, flowSpeed: number) {
   const k1 = 3.1
   const k2 = 5.7
   const k3 = 7.9
@@ -131,7 +160,7 @@ function stepFlow(count: number, t: number, dt: number) {
 
   const sin = Math.sin
   const cos = Math.cos
-  const stepBase = FLOW_SPEED * dt
+  const stepBase = flowSpeed * dt
 
   for (let i = 0; i < count; i++) {
     const px = positions[i * 2]
@@ -164,9 +193,19 @@ function stepFlow(count: number, t: number, dt: number) {
   }
 }
 
+type DrawArgs = {
+  t: number
+  dt: number
+  dpr: number
+  count: number
+  darkColor: [number, number, number]
+  lightColor: [number, number, number]
+  flowSpeed: number
+}
+
 type Renderer = {
   resize: (cw: number, ch: number) => void
-  draw: (t: number, dt: number, dpr: number, count: number) => void
+  draw: (args: DrawArgs) => void
   destroy: () => void
 }
 
@@ -235,8 +274,8 @@ function makeWebGLRenderer(canvas: HTMLCanvasElement): Renderer | null {
     resize(cw, ch) {
       gl!.viewport(0, 0, cw, ch)
     },
-    draw(t, dt, dpr, count) {
-      stepFlow(count, t, dt)
+    draw({ t, dt, dpr, count, darkColor, lightColor, flowSpeed }) {
+      stepFlow(count, t, dt, flowSpeed)
       gl!.bindBuffer(gl!.ARRAY_BUFFER, posBuf)
       gl!.bufferSubData(
         gl!.ARRAY_BUFFER,
@@ -248,12 +287,14 @@ function makeWebGLRenderer(canvas: HTMLCanvasElement): Renderer | null {
       gl!.uniform1f(uDpr, dpr)
       gl!.clear(gl!.COLOR_BUFFER_BIT)
 
+      // Pass 1: deposit dark pixels via "over" blend → visible on light bg
       gl!.blendFunc(gl!.ONE, gl!.ONE_MINUS_SRC_ALPHA)
-      gl!.uniform3f(uColor, DARK_RGB[0], DARK_RGB[1], DARK_RGB[2])
+      gl!.uniform3f(uColor, darkColor[0], darkColor[1], darkColor[2])
       gl!.drawArrays(gl!.POINTS, 0, count)
 
+      // Pass 2: add light pixels via additive blend → visible on dark bg
       gl!.blendFunc(gl!.ONE, gl!.ONE)
-      gl!.uniform3f(uColor, LIGHT_RGB[0], LIGHT_RGB[1], LIGHT_RGB[2])
+      gl!.uniform3f(uColor, lightColor[0], lightColor[1], lightColor[2])
       gl!.drawArrays(gl!.POINTS, 0, count)
     },
     destroy() {
@@ -274,19 +315,19 @@ function make2DRenderer(canvas: HTMLCanvasElement): Renderer | null {
       cw = w
       ch = h
     },
-    draw(t, dt, dpr, count) {
-      stepFlow(count, t, dt)
+    draw({ t, dt, dpr, count, darkColor, lightColor, flowSpeed }) {
+      stepFlow(count, t, dt, flowSpeed)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const w = cw / dpr
       const h = ch / dpr
       ctx.globalCompositeOperation = "source-over"
       ctx.clearRect(0, 0, w, h)
-      const dr = Math.round(DARK_RGB[0] * 255)
-      const dg = Math.round(DARK_RGB[1] * 255)
-      const db = Math.round(DARK_RGB[2] * 255)
-      const lr = Math.round(LIGHT_RGB[0] * 255)
-      const lg = Math.round(LIGHT_RGB[1] * 255)
-      const lb = Math.round(LIGHT_RGB[2] * 255)
+      const dr = Math.round(darkColor[0] * 255)
+      const dg = Math.round(darkColor[1] * 255)
+      const db = Math.round(darkColor[2] * 255)
+      const lr = Math.round(lightColor[0] * 255)
+      const lg = Math.round(lightColor[1] * 255)
+      const lb = Math.round(lightColor[2] * 255)
       for (let pass = 0; pass < 2; pass++) {
         ctx.globalCompositeOperation = pass === 0 ? "source-over" : "lighter"
         for (let i = 0; i < count; i++) {
@@ -323,6 +364,9 @@ export function HighlightOverlay() {
   useEffect(() => {
     initParticles()
 
+    const EDGE_FADE =
+      "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)"
+
     const wrap = document.createElement("div")
     wrap.style.cssText = [
       "position: fixed",
@@ -334,6 +378,11 @@ export function HighlightOverlay() {
       "z-index: 2147483646",
       "opacity: 0",
       "overflow: hidden",
+      "border-radius: 16px",
+      `mask-image: ${EDGE_FADE}`,
+      `-webkit-mask-image: ${EDGE_FADE}`,
+      "mask-composite: intersect",
+      "-webkit-mask-composite: source-in",
       `transition: opacity ${FADE_MS}ms ease`,
       "will-change: opacity",
       "isolation: auto"
@@ -370,11 +419,34 @@ export function HighlightOverlay() {
     let lastT = performance.now()
     const start = lastT
 
+    let dimmedEl: HTMLElement | null = null
+    let savedOpacity = ""
+    let savedTransition = ""
+    const TARGET_DIM = "0.35"
+    let verdictActive = false
+
+    const dimElement = (el: HTMLElement | null) => {
+      if (el === dimmedEl) return
+      if (dimmedEl) {
+        dimmedEl.style.opacity = savedOpacity
+        dimmedEl.style.transition = savedTransition
+      }
+      if (el) {
+        savedOpacity = el.style.opacity
+        savedTransition = el.style.transition
+        el.style.transition = "opacity 220ms ease"
+        el.style.opacity = TARGET_DIM
+      }
+      dimmedEl = el
+      verdictActive = false
+    }
+
     const tick = () => {
       const el = useStore.getState().highlighted
 
       if (!el) {
         if (wrap.style.opacity !== "0") wrap.style.opacity = "0"
+        dimElement(null)
         lastT = performance.now()
         raf = requestAnimationFrame(tick)
         return
@@ -383,10 +455,13 @@ export function HighlightOverlay() {
       const rect = el.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) {
         if (wrap.style.opacity !== "0") wrap.style.opacity = "0"
+        dimElement(null)
         lastT = performance.now()
         raf = requestAnimationFrame(tick)
         return
       }
+
+      dimElement(el as HTMLElement)
 
       const w = rect.width + PAD * 2
       const h = rect.height + PAD * 2
@@ -405,9 +480,66 @@ export function HighlightOverlay() {
         renderer!.resize(cw, ch)
       }
 
+      const aiRating = useStore.getState().aiRating
+
+      // Verdict gate: only color the overlay AFTER a non-zero rating arrives
+      // for the current element. Resetting aiRating to 0 (on element switch)
+      // immediately drops the verdict and the color goes away with it.
+      if (aiRating <= 0.001) verdictActive = false
+      else if (!verdictActive) verdictActive = true
+
+      // Three-tier weights blend smoothly across the rating range.
+      const yToR = smoothstepN(YELLOW_TO_RED_LOW, YELLOW_TO_RED_HIGH, aiRating)
+      const gToY = smoothstepN(
+        GREEN_TO_YELLOW_LOW,
+        GREEN_TO_YELLOW_HIGH,
+        aiRating
+      )
+      const greenW = verdictActive ? 1 - gToY : 0
+      const redW = verdictActive ? yToR : 0
+      const yellowW = verdictActive ? Math.max(0, gToY - yToR) : 0
+      const tierIntensity = Math.min(1, greenW + yellowW + redW)
+
+      // Particle density / flow speed scales only with the red tier so the
+      // alarm chaos kicks in at the top end. Green and yellow stay calm.
+      const density = lerp(DENSITY_NORMAL, DENSITY_ALARM, redW)
+      const flowSpeed = lerp(FLOW_SPEED_NORMAL, FLOW_SPEED_ALARM, redW)
+
       const targetCount = Math.min(
         MAX_PARTICLES,
-        Math.floor(w * h * DENSITY_PER_PX)
+        Math.floor(w * h * density)
+      )
+
+      // Particle colors: weighted blend of three tiers (separately for the
+      // dark "over" pass and the light additive pass), mixed in over the
+      // neutral colors by overall verdict strength.
+      const sum = greenW + yellowW + redW || 1
+      const blend = (
+        neutral: [number, number, number],
+        green: [number, number, number],
+        yellow: [number, number, number],
+        red: [number, number, number]
+      ): [number, number, number] => {
+        const r = green[0] * greenW + yellow[0] * yellowW + red[0] * redW
+        const g = green[1] * greenW + yellow[1] * yellowW + red[1] * redW
+        const b = green[2] * greenW + yellow[2] * yellowW + red[2] * redW
+        return [
+          lerp(neutral[0], r / sum, tierIntensity),
+          lerp(neutral[1], g / sum, tierIntensity),
+          lerp(neutral[2], b / sum, tierIntensity)
+        ]
+      }
+      const darkColor = blend(
+        COLOR_NEUTRAL_DARK,
+        COLOR_GREEN_DARK,
+        COLOR_YELLOW_DARK,
+        COLOR_RED_DARK
+      )
+      const lightColor = blend(
+        COLOR_NEUTRAL_LIGHT,
+        COLOR_GREEN_LIGHT,
+        COLOR_YELLOW_LIGHT,
+        COLOR_RED_LIGHT
       )
 
       const now = performance.now()
@@ -415,7 +547,15 @@ export function HighlightOverlay() {
       lastT = now
       const t = (now - start) * 0.001
 
-      renderer!.draw(t, dt, dpr, targetCount)
+      renderer!.draw({
+        t,
+        dt,
+        dpr,
+        count: targetCount,
+        darkColor,
+        lightColor,
+        flowSpeed
+      })
 
       raf = requestAnimationFrame(tick)
     }
@@ -425,6 +565,7 @@ export function HighlightOverlay() {
     return () => {
       cancelAnimationFrame(raf)
       renderer?.destroy()
+      dimElement(null)
       wrap.remove()
     }
   }, [])

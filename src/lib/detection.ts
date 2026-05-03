@@ -1,3 +1,8 @@
+// TODO: real detection pipeline goes here. Currently AIDetector calls
+// Math.random() inline and skips this round-trip entirely. When wiring in a
+// real model, send content via chrome.runtime.sendMessage to the offscreen
+// worker (see src/tabs/offscreen.tsx) and resolve with a number in [0, 1].
+
 const MAX_CONTENT_LEN = 1200
 
 type DetectResponse = { rating?: number | null; error?: string }

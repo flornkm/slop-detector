@@ -13,7 +13,6 @@
     "css:watch": "bun run scripts/css-watch.ts"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.83",
     "@plasmohq/storage": "^1.13.0",
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.17.10",

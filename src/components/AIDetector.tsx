@@ -1,6 +1,5 @@
 import { useFrame } from "@react-three/fiber"
 import { useRef } from "react"
-import { detectAI, extractContent } from "~lib/detection"
 import { useStore } from "~lib/store"
 
 const HOVER_THRESHOLD_S = 2.0
@@ -10,7 +9,6 @@ export function AIDetector() {
   const lastEl = useRef<Element | null>(null)
   const enteredAt = useRef(0)
   const detectedFor = useRef<WeakSet<Element>>(new WeakSet())
-  const inFlight = useRef(false)
 
   useFrame(({ clock }) => {
     const state = useStore.getState()
@@ -28,6 +26,7 @@ export function AIDetector() {
     if (el !== lastEl.current) {
       lastEl.current = el
       enteredAt.current = t
+      if (state.aiRating !== 0) state.setAiRating(0)
       return
     }
 
@@ -39,39 +38,17 @@ export function AIDetector() {
       return
     }
 
-    if (inFlight.current) return
     if (detectedFor.current.has(el)) return
     if (t - enteredAt.current < HOVER_THRESHOLD_S) return
-
-    const content = extractContent(el)
-    if (!content) {
-      console.log("[slop] empty content, skipping", el.tagName)
-      detectedFor.current.add(el)
-      return
-    }
-
     detectedFor.current.add(el)
-    inFlight.current = true
+
+    // TODO: replace this random rating with real AI-detection logic
+    // (vision model for images, text classifier for text, etc.)
+    const rating = Math.random()
     console.log(
-      `[slop] dispatch detect | <${el.tagName.toLowerCase()}> | ${content.slice(0, 60)}…`
+      `[slop] random rating: ${rating.toFixed(2)} | <${el.tagName.toLowerCase()}>`
     )
-    detectAI(content)
-      .then((rating) => {
-        if (rating === null) {
-          console.warn("[slop] could not parse rating")
-          return
-        }
-        console.log(
-          `[slop] rating: ${rating.toFixed(2)} | <${el.tagName.toLowerCase()}> | ${content.slice(0, 80)}`
-        )
-        useStore.getState().setAiRating(rating)
-      })
-      .catch((err) => {
-        console.error("[slop] detection failed:", err?.message || err, err)
-      })
-      .finally(() => {
-        inFlight.current = false
-      })
+    useStore.getState().setAiRating(rating)
   })
 
   return null

@@ -1,6 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber"
 import { useEffect, useMemo, useRef } from "react"
 import * as THREE from "three"
+import { bodyState } from "~lib/bodyState"
 import { stepReading } from "~lib/reading"
 import { useStore } from "~lib/store"
 
@@ -8,6 +9,12 @@ const FOLLOW = 0.22
 const ROT_FOLLOW = 0.2
 const PROBE_Y = 0.014
 const REST_ANGLE = Math.PI
+// Probe sits on the body's top surface initially.
+const ATTACHED_Z = -0.02
+// Spring constants — match DeviceTilt's auto slide-in feel exactly.
+const SLIDE_SPRING_K = 0.028
+const SLIDE_DAMPING = 0.9
+const SETTLED_THRESHOLD = 0.0025
 
 const BODY_HALF_X = 0.053
 const BODY_HALF_Z = 0.033
@@ -19,12 +26,23 @@ export function Probe({ node }: { node: THREE.Object3D }) {
   const setReading = useStore((s) => s.setReading)
 
   const rest = useMemo(() => {
-    node.position.set(0, PROBE_Y, -0.085)
     node.rotation.set(0, REST_ANGLE, 0)
-    return node.position.clone()
+    return new THREE.Vector3(0, PROBE_Y, -0.085)
   }, [node])
 
-  const target = useRef(rest.clone())
+  const target = useRef(new THREE.Vector3())
+  const settled = useRef(false)
+  const slideVelX = useRef(0)
+  const slideVelZ = useRef(0)
+
+  // Initial probe position: attached to top of body, off-screen with body. Spring physics
+  // (matching DeviceTilt) will pull it from here to its rest position above the body.
+  useMemo(() => {
+    const startX = bodyState.offsetX
+    const startZ = bodyState.offsetZ + ATTACHED_Z
+    node.position.set(startX, PROBE_Y, startZ)
+    target.current.set(startX, PROBE_Y, startZ)
+  }, [node, rest])
   const dragging = useRef(false)
   const offset = useRef(new THREE.Vector3())
   const plane = useMemo(
@@ -145,9 +163,37 @@ export function Probe({ node }: { node: THREE.Object3D }) {
   const velocity = useMemo(() => new THREE.Vector3(), [])
 
   useFrame(({ clock }) => {
+    node.visible = true
+
     const prevX = node.position.x
     const prevZ = node.position.z
-    node.position.lerp(target.current, FOLLOW)
+
+    if (!settled.current && !dragging.current) {
+      // Spring-based slide-in toward rest, matching DeviceTilt's auto slide animation.
+      slideVelX.current += (rest.x - node.position.x) * SLIDE_SPRING_K
+      slideVelX.current *= SLIDE_DAMPING
+      node.position.x += slideVelX.current
+      slideVelZ.current += (rest.z - node.position.z) * SLIDE_SPRING_K
+      slideVelZ.current *= SLIDE_DAMPING
+      node.position.z += slideVelZ.current
+      node.position.y = PROBE_Y
+
+      if (
+        Math.abs(rest.x - node.position.x) < SETTLED_THRESHOLD &&
+        Math.abs(rest.z - node.position.z) < SETTLED_THRESHOLD &&
+        Math.abs(slideVelX.current) < 0.0008 &&
+        Math.abs(slideVelZ.current) < 0.0008
+      ) {
+        node.position.copy(rest)
+        slideVelX.current = 0
+        slideVelZ.current = 0
+        settled.current = true
+        target.current.copy(rest)
+      }
+    } else {
+      if (!dragging.current) target.current.copy(rest)
+      node.position.lerp(target.current, FOLLOW)
+    }
 
     velocity.set(node.position.x - prevX, 0, node.position.z - prevZ)
     lastPos.copy(node.position)
