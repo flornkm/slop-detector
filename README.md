@@ -51,3 +51,77 @@ Not a real AI classifier. Heuristics catch obvious slop, miss subtle slop, and w
 This whole thing was built in a weekend, with Claude. The 3D Geiger counter — body, probe, cable, screen, buttons — was modelled in Blender via Claude's [Blender MCP](https://github.com/ahujasid/blender-mcp), pose-by-pose. The code was written almost entirely in [Claude Code](https://claude.com/claude-code): the WebGL particle system, the heuristic scorer, the Twitter/LinkedIn DOM extraction, the sticker-conformance raycasting, all of it.
 
 So yeah — an AI-slop detector, made by AI. Take that as you will.
+
+## Install it
+
+Once it's live in the Chrome Web Store, the install will be a single click on the listing. Until then, you can sideload it from this repo:
+
+1. Clone the repo and run `bun install` and `bun run build`. That produces `build/chrome-mv3-prod/`.
+2. Open `chrome://extensions` in Chrome.
+3. Toggle **Developer mode** on (top-right).
+4. Click **Load unpacked** and pick the `build/chrome-mv3-prod/` folder.
+5. Pin the icon to your toolbar so you can find it. Click it once to enable.
+
+That's it. The device will start sliding into the corner of every page you visit.
+
+## Develop locally
+
+You'll need [Bun](https://bun.sh) installed. Then:
+
+```bash
+git clone https://github.com/floriankiem/slob-detector.git
+cd slob-detector
+bun install
+bun run dev
+```
+
+`bun run dev` does two things in parallel:
+
+- Compiles the Tailwind CSS + flattens it through Lightning CSS so Plasmo's older bundler can swallow Tailwind v4's output.
+- Runs `plasmo dev`, which builds the extension into `build/chrome-mv3-dev/` and rebuilds on every save.
+
+Load `build/chrome-mv3-dev/` in `chrome://extensions` (same flow as installing). Now your edits hot-reload — the content script reinjects on save, and the background worker restarts.
+
+A quick map of where things live:
+
+```
+src/
+  contents/overlay.tsx      The content script that mounts on every page
+  components/               three.js parts: the device, probe, particles, etc.
+  components/HighlightOverlay.tsx   The WebGL particle overlay
+  components/AIDetector.tsx The 1-second-hover trigger that calls the scorer
+  lib/textHeuristic.ts      Text scoring (vocab, phrases, em-dashes, anaphora…)
+  lib/imageDetect.ts        Image scoring (host fingerprinting, C2PA TODO)
+  lib/socialDetect.ts       Twitter/LinkedIn post-text + video detection
+  lib/store.ts              The shared zustand store (powered, reading, …)
+  background.ts             Toolbar icon click → toggle storage flag
+
+assets/
+  models/MODEL.blend        The Blender source file for the device
+  models/geiger.glb         Exported model used at runtime
+  audio/                    Geiger-counter clicks
+  fonts/                    Commit Mono
+  sticker.png, icon.png     Sticker decal + extension icon
+```
+
+## Contributing
+
+The fastest contribution that helps is **growing the heuristic**. New AI tells appear constantly. If you spot a phrase, vocab pattern, sentence-shape, or LinkedIn cliché the detector misses, add it.
+
+- **Text patterns** go in `src/lib/textHeuristic.ts`. Drop your regex into `VOCAB_MARKERS` (single words / short phrases) or `PHRASE_MARKERS` (multi-word) or, for structural patterns, add a new check in `scoreText`. Each block has a comment explaining what it matches.
+- **AI image hosts** go in `src/lib/imageDetect.ts` → `AI_GENERATOR_HOSTS`.
+- **AI video hosts** go in `src/lib/socialDetect.ts` → `AI_VIDEO_HOSTS`.
+- **Social platform extraction** (e.g. detection on a new site) goes in `src/lib/socialDetect.ts`. Add a `findThePostText(el)`-style helper next to the Twitter and LinkedIn ones.
+
+Other welcome contributions:
+
+- C2PA manifest reading (there's a TODO in `imageDetect.ts` with the pseudocode).
+- Better visuals (sticker placement, particle behaviour, sound design).
+- New 3D parts on the device — open `assets/models/MODEL.blend` in Blender, edit, export back to `geiger.glb` (Y up, +Z forward, with materials).
+
+Steps:
+
+1. Fork the repo.
+2. Make a branch: `git checkout -b your-improvement`.
+3. Run `bun run dev`, hover something, watch it light up red.
+4. Commit, push, open a PR.
