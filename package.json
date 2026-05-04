@@ -1,7 +1,7 @@
 {
   "name": "slop-detector",
   "displayName": "Slop Detector",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A Geiger-counter overlay that reacts to whatever page you're on.",
   "author": "Florian Kiem",
   "scripts": {
