@@ -6,7 +6,7 @@ This repository is WIP and just a public version of an experiment I've been work
 
 ## How it works (in plain English)
 
-It's a Chrome extension. When you turn it on, a tiny 3D Geiger counter slides into the corner of every page you visit. You drag the probe over things on the page — text, images, tweets — and it tells you how AI-slop-y they look.
+It's a Chrome extension. Every page starts clean. When you want to scan a page, you click the toolbar icon — a tiny 3D Geiger counter slides into the corner. You drag the probe over things on the page — text, images, tweets — and it tells you how AI-slop-y they look. Click the icon again to dismiss it. The next page you visit is clean again until you ask for the device there too.
 
 ### The detector
 
