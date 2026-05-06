@@ -5,7 +5,6 @@
     "": {
       "name": "slob-detector",
       "dependencies": {
-        "@plasmohq/storage": "^1.13.0",
         "@react-three/drei": "^9.114.0",
         "@react-three/fiber": "^8.17.10",
         "howler": "^2.2.4",
@@ -415,8 +414,6 @@
     "@plasmohq/parcel-transformer-svelte": ["@plasmohq/parcel-transformer-svelte@0.6.0", "", { "dependencies": { "@parcel/core": "2.9.3", "@parcel/diagnostic": "2.9.3", "@parcel/plugin": "2.9.3", "@parcel/source-map": "2.1.1", "@parcel/utils": "2.9.3", "svelte": "4.2.2" } }, "sha512-5lZW6NBtzhJaCyjpKaZF1/YzY9CF+kbfNknvASJB/Cf6uJPJlrgdxoWiVJ8IWMs3DyLgAnJXTdIU+uwjwXP1wg=="],
 
     "@plasmohq/parcel-transformer-vue": ["@plasmohq/parcel-transformer-vue@0.5.0", "", { "dependencies": { "@parcel/core": "2.9.3", "@parcel/diagnostic": "2.9.3", "@parcel/plugin": "2.9.3", "@parcel/source-map": "2.1.1", "@parcel/types": "2.9.3", "@parcel/utils": "2.9.3", "@plasmohq/consolidate": "0.17.0", "@vue/compiler-sfc": "3.3.4", "nullthrows": "1.1.1", "semver": "7.5.4", "vue": "3.3.4" } }, "sha512-/3oVbajt+DRqtbM0RkKFtfyZR8DVjcsYpj1jHqPParGVBiXwgP0D/8Bj5p5/5Iqihs08gzasTcjKcwQKKdj0og=="],
-
-    "@plasmohq/storage": ["@plasmohq/storage@1.15.0", "", { "dependencies": { "pify": "6.1.0" }, "peerDependencies": { "react": "^16.8.6 || ^17 || ^18 || ^19.0.0" }, "optionalPeers": ["react"] }, "sha512-zBZ2NyVyvZlql2XHsjkZDL0+bqF6lir9RygeTnkYGF253M8DZttuSvjpsmpK6OWYmRXjhEqJeubd3+Zq9kuZ0w=="],
 
     "@pnpm/config.env-replace": ["@pnpm/config.env-replace@1.1.0", "", {}, "sha512-htyl8TWnKL7K/ESFa1oW2UB5lVDxuF5DpM7tBi6Hu2LNL3mWkIzNLG6N4zoCUP1lCKNxWy/3iu8mS8MvToGd6w=="],
 
@@ -1054,7 +1051,7 @@
 
     "picomatch": ["picomatch@4.0.4", "", {}, "sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A=="],
 
-    "pify": ["pify@6.1.0", "", {}, "sha512-KocF8ve28eFjjuBKKGvzOBGzG8ew2OqOOSxTTZhirkzH7h3BI1vyzqlR0qbfcDBve1Yzo3FVlWUAtCRrbVN8Fw=="],
+    "pify": ["pify@4.0.1", "", {}, "sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g=="],
 
     "pirates": ["pirates@4.0.7", "", {}, "sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA=="],
 
@@ -1415,8 +1412,6 @@
     "lmdb/msgpackr": ["msgpackr@1.8.5", "", { "optionalDependencies": { "msgpackr-extract": "^3.0.1" } }, "sha512-mpPs3qqTug6ahbblkThoUY2DQdNXcm4IapwOS3Vm/87vmpzLVelvp9h3It1y9l1VPpiFLV11vfOXnmeEwiIXwg=="],
 
     "lmdb/node-addon-api": ["node-addon-api@4.3.0", "", {}, "sha512-73sE9+3UaLYYFmDsFZnqCInzPyh3MqIwZO9cw58yIqAZhONrrabrYyYe3TuIqtIiOuTXVhsGau8hcrhhwSsDIQ=="],
-
-    "make-dir/pify": ["pify@4.0.1", "", {}, "sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g=="],
 
     "make-dir/semver": ["semver@5.7.2", "", { "bin": { "semver": "bin/semver" } }, "sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g=="],
 

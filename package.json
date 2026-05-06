@@ -1,7 +1,7 @@
 {
   "name": "slop-detector",
   "displayName": "Slop Detector",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Geiger-counter overlay that reacts to whatever page you're on.",
   "author": "Florian Kiem",
   "scripts": {
@@ -13,7 +13,6 @@
     "css:watch": "bun run scripts/css-watch.ts"
   },
   "dependencies": {
-    "@plasmohq/storage": "^1.13.0",
     "@react-three/drei": "^9.114.0",
     "@react-three/fiber": "^8.17.10",
     "howler": "^2.2.4",
@@ -39,7 +38,7 @@
   },
   "manifest": {
     "host_permissions": ["<all_urls>"],
-    "permissions": ["storage", "activeTab"],
+    "permissions": ["activeTab"],
     "content_security_policy": {
       "extension_pages": "script-src 'self'; object-src 'self'"
     }
